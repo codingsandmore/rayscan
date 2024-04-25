@@ -43,8 +43,8 @@ func (c *PairCollector) Channel() chan<- Info {
 	return c.infoC
 }
 
-func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
-	log.Debugf("[%v] PairCollector: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
+func (c *PairCollector) Start(pairPublishC chan *PairInfo) {
+	log.Infof("PairCollector: starting...")
 
 	go func() {
 		defer close(c.doneC)
@@ -53,13 +53,13 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			tokenAddress := genericInfo.TokenAddress()
 			_, cOk := c.createdPairs[tokenAddress]
 			if cOk {
-				log.Debugf("[%v] PairCollector: already created pair for token: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress)
+				log.Infof("PairCollector: already created pair for token: %s", tokenAddress)
 				continue
 			}
 
-			pair, err := c.handleInfo(genericInfo, pairPublishC)
+			pair, err := c.handleInfo(genericInfo)
 			if err != nil {
-				log.Debugf("[%v] PairCollector: error handling info (%T): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), genericInfo, err)
+				log.Infof("PairCollector: error handling info (%T): %s", genericInfo, err)
 				continue
 			}
 
@@ -68,7 +68,7 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			}
 
 			if !pair.Ready() {
-				log.Debugf("[%v] PairCollector: pair got all info but not ready; drop it (token: %s, ammid: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID)
+				log.Infof("PairCollector: pair got all info but not ready; drop it (token: %s, ammid: %s)", tokenAddress, pair.AmmInfo.AmmID)
 				delete(c.pairs, tokenAddress)
 				continue
 			}
@@ -78,14 +78,23 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			// Update pair status.
 			if tokenAddress != solana.WrappedSol {
 				c.createdPairs[tokenAddress] = struct{}{}
-				log.Debugf("[%v] PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+				log.Infof("PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+
+				if pairPublishC != nil {
+					log.Infof("PairCollector: publishing new pair to subscriber (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+					pairPublishC <- pair
+				} else {
+					log.Warnf("PairCollector: you did not configure a subscribing channel, skipping step")
+				}
+
 				delete(c.pairs, tokenAddress)
 			}
+
 		}
 	}()
 }
 
-func (c *PairCollector) handleInfo(genericInfo Info, pairPublishC []chan<- *PairInfo) (*PairInfo, error) {
+func (c *PairCollector) handleInfo(genericInfo Info) (*PairInfo, error) {
 	switch info := genericInfo.(type) {
 	case *serum.MarketInfo:
 		return c.handleMarketInfo(info)
@@ -109,7 +118,7 @@ func (c *PairCollector) handleMarketInfo(market *serum.MarketInfo) (*PairInfo, e
 		MarketInfo: *market,
 	}
 
-	log.Debugf("[%v] PairCollector: new market discovered for (token: %s, tx time: %v)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
+	log.Infof("PairCollector: new market discovered for (token: %s, tx time: %v)", tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
 	return c.pairs[tokenAddress], nil
 }
 
@@ -139,8 +148,9 @@ func (c *PairCollector) handleAmmInfo(amm *raydium.AmmInfo) (*PairInfo, error) {
 	pair.AmmInfo = *amm
 
 	if !pair.AmmInfo.PoolCoinTokenAccount.Equals(pair.CalculatedAmmInfo.PoolCoinTokenAccount) {
-		log.Debugf("[%v] PairCollector: pool coin token account mismatch (token: %s, calctoken: %s, ammid: %s, poolcoin: %s, calcpoolcoin: %s, poolpc: %s, calcpoolpc: %s, coinamount: %f, pcamount: %f)\n",
-			time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.CalculatedAmmInfo.TokenAddress(), pair.AmmInfo.AmmID, pair.AmmInfo.PoolCoinTokenAccount, pair.CalculatedAmmInfo.PoolCoinTokenAccount,
+		log.Warnf(
+			"PairCollector: pool coin token account mismatch (token: %s, calctoken: %s, ammid: %s, poolcoin: %s, calcpoolcoin: %s, poolpc: %s, calcpoolpc: %s, coinamount: %f, pcamount: %f)",
+			tokenAddress, pair.CalculatedAmmInfo.TokenAddress(), pair.AmmInfo.AmmID, pair.AmmInfo.PoolCoinTokenAccount, pair.CalculatedAmmInfo.PoolCoinTokenAccount,
 			pair.AmmInfo.PoolPcTokenAccount, pair.CalculatedAmmInfo.PoolPcTokenAccount, pair.AmmInfo.InitialLiveInfo.PooledToken, pair.AmmInfo.InitialLiveInfo.PooledLamports)
 		pair.AmmInfo.PoolCoinTokenAccount = pair.CalculatedAmmInfo.PoolCoinTokenAccount
 		pair.AmmInfo.PoolPcTokenAccount = pair.CalculatedAmmInfo.PoolPcTokenAccount

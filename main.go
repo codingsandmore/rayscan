@@ -20,7 +20,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rpcPool, err := connection.NewRPCClientPool(cfg.Nodes)
+	rpcPool, err := connection.NewRPCClientPool(cfg.Nodes, nil)
 	if err != nil {
 		log.Errorf("Error creating rpc pool: %s\n", err)
 		os.Exit(1)

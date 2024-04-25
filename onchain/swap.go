@@ -1,6 +1,7 @@
 package onchain
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,6 +20,15 @@ type TokenInfo struct {
 	Address              solana.PublicKey
 }
 
+func (t *TokenInfo) String() string {
+	return fmt.Sprintf("Token(\n"+
+		"\ttime: %s\n"+
+		"\tsupply: %d\n"+
+		"\tdecimals: %d\n"+
+		"\ttxid: %s\n"+
+		"\taddress: %s\n"+
+		")", t.TxTime, t.TotalSupply, t.Decimals, t.TxID, t.Address)
+}
 func (t *TokenInfo) TokenAddress() solana.PublicKey {
 	return t.Address
 }
@@ -44,6 +54,14 @@ type PairInfo struct {
 	mu sync.RWMutex
 }
 
+func (p *PairInfo) String() string {
+	return fmt.Sprintf("Pair(\n"+
+		"\ttoken: %s\n"+
+		"\tamm %s\n"+
+		"\tcalculated amm: %s\n"+
+		"\treadiness: %s\n"+
+		")", p.TokenInfo.String(), p.AmmInfo.String(), p.CalculatedAmmInfo.String(), p.Readiness)
+}
 func (p *PairInfo) GetCurrentAmmLiveInfo() raydium.AmmLiveInfo {
 	p.mu.RLock()
 	defer p.mu.RUnlock()

@@ -83,14 +83,23 @@ type ConnectionInfo struct {
 	WSNode  string
 }
 
-func NewRPCClientPool(nodes map[string]config.RPCNode) (*RPCPool, error) {
+type BuildRPCClient func(url string) *rpc.Client
+
+func NewRPCClientPool(nodes map[string]config.RPCNode, init BuildRPCClient) (*RPCPool, error) {
 	var rpcPool RPCPool
 
 	initialLen := len(nodes)
 	log.Debugf("Checking connection list...\n")
 
 	for k, v := range nodes {
-		rpcClient := rpc.New(v.RPCEndpoint)
+		var rpcClient *rpc.Client
+
+		if init == nil {
+			log.Warnf("using default init for client creation, you really want to use an init function!!!")
+			rpcClient = rpc.New(v.RPCEndpoint)
+		} else {
+			rpcClient = init(v.RPCEndpoint)
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Millisecond)
 		health, err := rpcClient.GetHealth(ctx)

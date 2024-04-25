@@ -48,7 +48,7 @@ func (a *TxAnalyzer) Channel() chan<- TxCandidate {
 }
 
 func (a *TxAnalyzer) Start(infoPublishC chan<- Info) {
-	log.Debugf("[%v] TxAnalyzer: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
+	log.Debugf("[%v] TxAnalyzer: starting...", time.Now().Format("2006-01-02 15:04:05.000"))
 
 	go func() {
 		defer close(a.doneC)
@@ -72,20 +72,20 @@ func (a *TxAnalyzer) analyze(txCandidate TxCandidate, infoPublishC chan<- Info) 
 
 	rpcTx, tx, err := a.getConfirmedTransaction(ctx, txCandidate)
 	if err != nil {
-		log.Errorf("[%v] TxAnalyzer: error getting transaction (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Errorf("[%v] TxAnalyzer: error getting transaction (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 		return
 	}
 
 	// Known for sure that empty metadata is InitializeMarket instruction.
 	if txCandidate.Metadata == nil {
 		if err := a.analyzeInitMarket(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-			log.Errorf("[%v] TxAnalyzer: error analyzing init market (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+			log.Errorf("[%v] TxAnalyzer: error analyzing init market (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 		}
 		return
 	}
 
 	if err := a.analyzeAddLiquidity(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-		log.Errorf("[%v] TxAnalyzer: error analyzing add liquidity (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Errorf("[%v] TxAnalyzer: error analyzing add liquidity (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 	}
 }
 

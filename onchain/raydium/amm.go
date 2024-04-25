@@ -100,6 +100,10 @@ func (a *AmmInfo) Ready() bool {
 		a.TxID != solana.Signature{} && a.Slot != 0 && !a.TxTime.IsZero() && !a.Timestamp.IsZero() && a.InitialLiveInfo.Ready() && a.CurrentLiveInfo.Ready()
 }
 
+func (a *AmmInfo) String() string {
+	return a.TokenAddress().String()
+}
+
 // Update amm info if market pair was created in reverse order to match the order of the market.
 func (a *AmmInfo) UpdateSwap(ammSwapped bool) {
 	defer a.initializeCurrent()
@@ -108,7 +112,7 @@ func (a *AmmInfo) UpdateSwap(ammSwapped bool) {
 		return
 	}
 
-	log.Debugf("[%v] Swapping amm info (before): token: %s, currency: %s ... (after): token: %s, currency: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), a.TokenMintAddress, a.CurrencyAddress, a.CurrencyAddress, a.TokenMintAddress)
+	log.Debugf("[%v] Swapping amm info (before): token: %s, currency: %s ... (after): token: %s, currency: %s", time.Now().Format("2006-01-02 15:04:05.000"), a.TokenMintAddress, a.CurrencyAddress, a.CurrencyAddress, a.TokenMintAddress)
 	a.TokenMintAddress, a.CurrencyAddress = a.CurrencyAddress, a.TokenMintAddress
 	a.PoolCoinTokenAccount, a.PoolPcTokenAccount = a.PoolPcTokenAccount, a.PoolCoinTokenAccount
 	a.InitialLiveInfo.PooledToken, a.InitialLiveInfo.PooledLamports = a.InitialLiveInfo.PooledLamports, a.InitialLiveInfo.PooledToken

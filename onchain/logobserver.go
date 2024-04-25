@@ -76,7 +76,7 @@ func (o *LogObserver) Start(ctx context.Context, txCandidatePublishC chan<- TxCa
 }
 
 func (o *LogObserver) subscribeForOpenBookLogs(ctx context.Context) (*ws.LogSubscription, error) {
-	log.Debugf("[%v] LogObserver: Subscribe for OpenBook program logs on %s...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName)
+	log.Debugf("[%v] LogObserver: Subscribe for OpenBook program logs on %s...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName)
 	conn := o.rpcPool.NamedConnection(o.connName)
 	wsClient, err := ws.Connect(ctx, conn.ConnectionInfo.WSEndpoint)
 	if err != nil {
@@ -118,14 +118,14 @@ func (o *LogObserver) consumeOpenBookLogs(openBookSubID *ws.LogSubscription, txC
 }
 
 func (o *LogObserver) reconnectOpenBookSubscription(subID *ws.LogSubscription, reason error) {
-	log.Debugf("[%v] LogObserver: Reconnecting subscription for OpenBook program logs on %s due to: %v...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, reason)
+	log.Debugf("[%v] LogObserver: Reconnecting subscription for OpenBook program logs on %s due to: %v...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, reason)
 	subID.Unsubscribe()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	openBookSubID, err := o.subscribeForOpenBookLogs(ctx)
 	for err != nil {
-		log.Errorf("[%v] LogObserver: Error reconnecting subscription for OpenBook program logs on %s: %v; trying again...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, err)
+		log.Errorf("[%v] LogObserver: Error reconnecting subscription for OpenBook program logs on %s: %v; trying again...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, err)
 		time.Sleep(5 * time.Second)
 		ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
 		openBookSubID, err = o.subscribeForOpenBookLogs(ctx)
@@ -164,7 +164,7 @@ func (o *LogObserver) analyzeOpenBookLogs(log *ws.LogResult, txCandidatePublishC
 }
 
 func (o *LogObserver) subscribeForRaydiumLogs(ctx context.Context) (*ws.LogSubscription, error) {
-	log.Debugf("[%v] LogObserver: Subscribe for Raydium Liquidity program logs on %s...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName)
+	log.Debugf("[%v] LogObserver: Subscribe for Raydium Liquidity program logs on %s...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName)
 	conn := o.rpcPool.NamedConnection(o.connName)
 	wsClient, err := ws.Connect(ctx, conn.ConnectionInfo.WSEndpoint)
 	if err != nil {
@@ -206,14 +206,14 @@ func (o *LogObserver) consumeRaydiumLogs(raydiumSubID *ws.LogSubscription, txCan
 }
 
 func (o *LogObserver) reconnecRaydiumSubscription(subID *ws.LogSubscription, reason error) {
-	log.Debugf("[%v] LogObserver: Reconnecting subscription for Raydium program logs on %s due to: %v...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, reason)
+	log.Debugf("[%v] LogObserver: Reconnecting subscription for Raydium program logs on %s due to: %v...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, reason)
 	subID.Unsubscribe()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	raydiumSubID, err := o.subscribeForRaydiumLogs(ctx)
 	if err != nil {
-		log.Errorf("[%v] LogObserver: Error reconnecting subscription for Raydium program logs on %s: %v; trying again...\n", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, err)
+		log.Errorf("[%v] LogObserver: Error reconnecting subscription for Raydium program logs on %s: %v; trying again...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, err)
 		time.Sleep(5 * time.Second)
 		ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
 		raydiumSubID, err = o.subscribeForRaydiumLogs(ctx)
@@ -270,7 +270,7 @@ func (o *LogObserver) Stop(ctx context.Context) error {
 	for doneCount < len(o.doneC) {
 		select {
 		case <-ctx.Done():
-			log.Errorf("Err: LogObserver: forced shutdown\n")
+			log.Errorf("Err: LogObserver: forced shutdown")
 			return ctx.Err()
 		case <-o.doneC[doneCount]:
 			doneCount++
