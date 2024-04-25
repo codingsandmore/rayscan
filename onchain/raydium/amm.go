@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/codingsandmore/rayscan/onchain/serum"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"github.com/patrulek/rayscan/onchain/serum"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -107,7 +108,7 @@ func (a *AmmInfo) UpdateSwap(ammSwapped bool) {
 		return
 	}
 
-	fmt.Printf("[%v] Swapping amm info (before): token: %s, currency: %s ... (after): token: %s, currency: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), a.TokenMintAddress, a.CurrencyAddress, a.CurrencyAddress, a.TokenMintAddress)
+	log.Debugf("[%v] Swapping amm info (before): token: %s, currency: %s ... (after): token: %s, currency: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), a.TokenMintAddress, a.CurrencyAddress, a.CurrencyAddress, a.TokenMintAddress)
 	a.TokenMintAddress, a.CurrencyAddress = a.CurrencyAddress, a.TokenMintAddress
 	a.PoolCoinTokenAccount, a.PoolPcTokenAccount = a.PoolPcTokenAccount, a.PoolCoinTokenAccount
 	a.InitialLiveInfo.PooledToken, a.InitialLiveInfo.PooledLamports = a.InitialLiveInfo.PooledLamports, a.InitialLiveInfo.PooledToken

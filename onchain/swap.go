@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/codingsandmore/rayscan/onchain/raydium"
+	"github.com/codingsandmore/rayscan/onchain/serum"
 	"github.com/gagliardetto/solana-go"
-	"github.com/patrulek/rayscan/onchain/raydium"
-	"github.com/patrulek/rayscan/onchain/serum"
 )
 
 type TokenInfo struct {

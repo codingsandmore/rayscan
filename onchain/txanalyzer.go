@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/codingsandmore/rayscan/connection"
+	"github.com/codingsandmore/rayscan/onchain/raydium"
+	"github.com/codingsandmore/rayscan/onchain/serum"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	"github.com/patrulek/rayscan/connection"
-	"github.com/patrulek/rayscan/onchain/raydium"
-	"github.com/patrulek/rayscan/onchain/serum"
+	log "github.com/sirupsen/logrus"
 )
 
 var Max_Transaction_Version uint64 = 1
@@ -47,7 +48,7 @@ func (a *TxAnalyzer) Channel() chan<- TxCandidate {
 }
 
 func (a *TxAnalyzer) Start(infoPublishC chan<- Info) {
-	fmt.Printf("[%v] TxAnalyzer: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
+	log.Debugf("[%v] TxAnalyzer: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
 
 	go func() {
 		defer close(a.doneC)
@@ -71,20 +72,20 @@ func (a *TxAnalyzer) analyze(txCandidate TxCandidate, infoPublishC chan<- Info) 
 
 	rpcTx, tx, err := a.getConfirmedTransaction(ctx, txCandidate)
 	if err != nil {
-		fmt.Printf("[%v] TxAnalyzer: error getting transaction (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Errorf("[%v] TxAnalyzer: error getting transaction (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 		return
 	}
 
 	// Known for sure that empty metadata is InitializeMarket instruction.
 	if txCandidate.Metadata == nil {
 		if err := a.analyzeInitMarket(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-			fmt.Printf("[%v] TxAnalyzer: error analyzing init market (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+			log.Errorf("[%v] TxAnalyzer: error analyzing init market (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 		}
 		return
 	}
 
 	if err := a.analyzeAddLiquidity(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-		fmt.Printf("[%v] TxAnalyzer: error analyzing add liquidity (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Errorf("[%v] TxAnalyzer: error analyzing add liquidity (tx: %s): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
 	}
 }
 

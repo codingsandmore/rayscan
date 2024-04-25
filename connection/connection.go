@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/codingsandmore/rayscan/config"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
-	"github.com/patrulek/rayscan/config"
 )
 
 type Connection struct {
@@ -58,7 +59,7 @@ func (r *RPCPool) Client() *rpc.Client {
 	for i := 0; r.Connections[oldIdx].CooldownUntil.After(time.Now()); i++ {
 		oldIdx = (oldIdx + 1) % len(r.Connections)
 		if i == len(r.Connections) {
-			fmt.Printf("All connections are on cooldown, waiting for cooldown to end... Consider adding new RPC providers\n")
+			log.Debugf("All connections are on cooldown, waiting for cooldown to end... Consider adding new RPC providers\n")
 			time.Sleep(50 * time.Millisecond)
 			i = 0
 		}
@@ -86,7 +87,7 @@ func NewRPCClientPool(nodes map[string]config.RPCNode) (*RPCPool, error) {
 	var rpcPool RPCPool
 
 	initialLen := len(nodes)
-	fmt.Printf("Checking connection list...\n")
+	log.Debugf("Checking connection list...\n")
 
 	for k, v := range nodes {
 		rpcClient := rpc.New(v.RPCEndpoint)
@@ -104,13 +105,13 @@ func NewRPCClientPool(nodes map[string]config.RPCNode) (*RPCPool, error) {
 				code = err.(*jsonrpc.RPCError).Code
 			}
 
-			fmt.Printf("Remove unhealthy connection: %s (reason: %s, code: %d)\n", v.Name, reason, code)
+			log.Debugf("Remove unhealthy connection: %s (reason: %s, code: %d)\n", v.Name, reason, code)
 			rpcClient.Close()
 			continue
 		}
 
 		v.Name = k
-		fmt.Printf("Connection %s is healthy\n", v.Name)
+		log.Debugf("Connection %s is healthy\n", v.Name)
 
 		rpcPool.Connections = append(rpcPool.Connections, &Connection{
 			ConnectionInfo: v,
@@ -127,6 +128,6 @@ func NewRPCClientPool(nodes map[string]config.RPCNode) (*RPCPool, error) {
 		healthyConnectionNames[i] = c.ConnectionInfo.Name
 	}
 
-	fmt.Printf("Connection list checked! %d/%d connections are ok [%s]\n", len(rpcPool.Connections), initialLen, strings.Join(healthyConnectionNames, ", "))
+	log.Debugf("Connection list checked! %d/%d connections are ok [%s]\n", len(rpcPool.Connections), initialLen, strings.Join(healthyConnectionNames, ", "))
 	return &rpcPool, nil
 }

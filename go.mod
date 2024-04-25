@@ -1,10 +1,11 @@
-module github.com/patrulek/rayscan
+module github.com/codingsandmore/rayscan
 
 go 1.21.0
 
 require (
 	github.com/gagliardetto/solana-go v1.8.4
 	github.com/pelletier/go-toml v1.9.5
+	github.com/sirupsen/logrus v1.2.0
 )
 
 require (
@@ -23,6 +24,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect

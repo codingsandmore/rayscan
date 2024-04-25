@@ -3,11 +3,12 @@ package onchain
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"time"
 
+	"github.com/codingsandmore/rayscan/onchain/raydium"
+	"github.com/codingsandmore/rayscan/onchain/serum"
 	"github.com/gagliardetto/solana-go"
-	"github.com/patrulek/rayscan/onchain/raydium"
-	"github.com/patrulek/rayscan/onchain/serum"
 )
 
 type Info interface {
@@ -43,7 +44,7 @@ func (c *PairCollector) Channel() chan<- Info {
 }
 
 func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
-	fmt.Printf("[%v] PairCollector: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
+	log.Debugf("[%v] PairCollector: starting...\n", time.Now().Format("2006-01-02 15:04:05.000"))
 
 	go func() {
 		defer close(c.doneC)
@@ -52,13 +53,13 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			tokenAddress := genericInfo.TokenAddress()
 			_, cOk := c.createdPairs[tokenAddress]
 			if cOk {
-				fmt.Printf("[%v] PairCollector: already created pair for token: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress)
+				log.Debugf("[%v] PairCollector: already created pair for token: %s\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress)
 				continue
 			}
 
 			pair, err := c.handleInfo(genericInfo, pairPublishC)
 			if err != nil {
-				fmt.Printf("[%v] PairCollector: error handling info (%T): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), genericInfo, err)
+				log.Debugf("[%v] PairCollector: error handling info (%T): %s\n", time.Now().Format("2006-01-02 15:04:05.000"), genericInfo, err)
 				continue
 			}
 
@@ -67,7 +68,7 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			}
 
 			if !pair.Ready() {
-				fmt.Printf("[%v] PairCollector: pair got all info but not ready; drop it (token: %s, ammid: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID)
+				log.Debugf("[%v] PairCollector: pair got all info but not ready; drop it (token: %s, ammid: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID)
 				delete(c.pairs, tokenAddress)
 				continue
 			}
@@ -77,7 +78,7 @@ func (c *PairCollector) Start(pairPublishC []chan<- *PairInfo) {
 			// Update pair status.
 			if tokenAddress != solana.WrappedSol {
 				c.createdPairs[tokenAddress] = struct{}{}
-				fmt.Printf("[%v] PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+				log.Debugf("[%v] PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
 				delete(c.pairs, tokenAddress)
 			}
 		}
@@ -108,7 +109,7 @@ func (c *PairCollector) handleMarketInfo(market *serum.MarketInfo) (*PairInfo, e
 		MarketInfo: *market,
 	}
 
-	fmt.Printf("[%v] PairCollector: new market discovered for (token: %s, tx time: %v)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
+	log.Debugf("[%v] PairCollector: new market discovered for (token: %s, tx time: %v)\n", time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
 	return c.pairs[tokenAddress], nil
 }
 
@@ -138,7 +139,7 @@ func (c *PairCollector) handleAmmInfo(amm *raydium.AmmInfo) (*PairInfo, error) {
 	pair.AmmInfo = *amm
 
 	if !pair.AmmInfo.PoolCoinTokenAccount.Equals(pair.CalculatedAmmInfo.PoolCoinTokenAccount) {
-		fmt.Printf("[%v] PairCollector: pool coin token account mismatch (token: %s, calctoken: %s, ammid: %s, poolcoin: %s, calcpoolcoin: %s, poolpc: %s, calcpoolpc: %s, coinamount: %f, pcamount: %f)\n",
+		log.Debugf("[%v] PairCollector: pool coin token account mismatch (token: %s, calctoken: %s, ammid: %s, poolcoin: %s, calcpoolcoin: %s, poolpc: %s, calcpoolpc: %s, coinamount: %f, pcamount: %f)\n",
 			time.Now().Format("2006-01-02 15:04:05.000"), tokenAddress, pair.CalculatedAmmInfo.TokenAddress(), pair.AmmInfo.AmmID, pair.AmmInfo.PoolCoinTokenAccount, pair.CalculatedAmmInfo.PoolCoinTokenAccount,
 			pair.AmmInfo.PoolPcTokenAccount, pair.CalculatedAmmInfo.PoolPcTokenAccount, pair.AmmInfo.InitialLiveInfo.PooledToken, pair.AmmInfo.InitialLiveInfo.PooledLamports)
 		pair.AmmInfo.PoolCoinTokenAccount = pair.CalculatedAmmInfo.PoolCoinTokenAccount
