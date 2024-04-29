@@ -48,7 +48,7 @@ func (a *TxAnalyzer) Channel() chan<- TxCandidate {
 }
 
 func (a *TxAnalyzer) Start(infoPublishC chan<- Info) {
-	log.Debugf("[%v] TxAnalyzer: starting...", time.Now().Format("2006-01-02 15:04:05.000"))
+	log.Debugf("TxAnalyzer: starting...")
 
 	go func() {
 		defer close(a.doneC)
@@ -70,22 +70,35 @@ func (a *TxAnalyzer) analyze(txCandidate TxCandidate, infoPublishC chan<- Info) 
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 
+	log.Debugf("TxAnalyzer: analyzing tx candidate: %s", txCandidate.Signature.String())
+	begin := time.Now()
 	rpcTx, tx, err := a.getConfirmedTransaction(ctx, txCandidate)
 	if err != nil {
-		log.Errorf("[%v] TxAnalyzer: error getting transaction (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Infof("TxAnalyzer: error getting transaction (tx: %s): %s", txCandidate.Signature, err)
 		return
+	} else {
+		log.Debugf("received new tx: %s", txCandidate.Signature.String())
 	}
+	end := time.Now()
+	duration := end.Sub(begin)
+	log.Debugf("TxAnalyzer: tx: %s analyzed in %fs", txCandidate.Signature.String(), duration.Seconds())
 
 	// Known for sure that empty metadata is InitializeMarket instruction.
 	if txCandidate.Metadata == nil {
 		if err := a.analyzeInitMarket(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-			log.Errorf("[%v] TxAnalyzer: error analyzing init market (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+			log.Debugf("TxAnalyzer: error analyzing init market (tx: %s): %s", txCandidate.Signature, err)
 		}
 		return
 	}
 
 	if err := a.analyzeAddLiquidity(rpcTx, tx, txCandidate, infoPublishC); err != nil {
-		log.Errorf("[%v] TxAnalyzer: error analyzing add liquidity (tx: %s): %s", time.Now().Format("2006-01-02 15:04:05.000"), txCandidate.Signature, err)
+		log.Errorf("TxAnalyzer: error analyzing add liquidity (tx: %s): %s", txCandidate.Signature, err)
+	}
+	end = time.Now()
+	duration = end.Sub(begin)
+
+	if duration.Seconds() > 2 {
+		log.Warnf("TxAnalyzer: finished handling of tx: %s in %fs", txCandidate.Signature.String(), duration.Seconds())
 	}
 }
 
@@ -97,15 +110,31 @@ func (a *TxAnalyzer) getConfirmedTransaction(ctx context.Context, txCandidate Tx
 		case <-ctx.Done():
 			return nil, nil, ctx.Err()
 		default:
+			begin := time.Now()
+			log.Debugf("load transaction data for %s", txCandidate.Signature.String())
 			rctx, rcancel := context.WithTimeout(ctx, 5*time.Second)
 			rpcTx, err := rpcClient.GetTransaction(rctx, txCandidate.Signature, &rpc.GetTransactionOpts{
 				MaxSupportedTransactionVersion: &Max_Transaction_Version,
 				Commitment:                     rpc.CommitmentConfirmed,
 			})
+			end := time.Now()
+			duration := end.Sub(begin)
+			if duration.Seconds() > 2 {
+				log.Warnf("finished loading transaction data in %fs for %s", duration.Seconds(), txCandidate.Signature.String())
+			}
 			rcancel()
 
+			if err != nil && err.Error() == "not found" {
+				log.Debugf("error observed on RPC client %s: %s. This was ignored", rpcClient, err)
+				continue
+			}
 			if err != nil {
+				log.Warnf("error observed on RPC client %s: %s", rpcClient, err)
+				begin = time.Now()
 				rpcClient = a.rpcPool.Client() // Try with another client.
+				end = time.Now()
+				duration = end.Sub(begin)
+				log.Debugf("switched to new rpc client in %fs due to error %s", duration.Seconds(), err)
 				continue
 			}
 

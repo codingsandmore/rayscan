@@ -135,36 +135,41 @@ func (o *LogObserver) reconnectOpenBookSubscription(subID *ws.LogSubscription, r
 	*subID = *openBookSubID
 }
 
-func (o *LogObserver) analyzeOpenBookLogs(log *ws.LogResult, txCandidatePublishC chan<- TxCandidate) {
+func (o *LogObserver) analyzeOpenBookLogs(l *ws.LogResult, txCandidatePublishC chan<- TxCandidate) {
+	begin := time.Now()
 	// Find possible InitMarket instruction logs:
-	for i := range log.Value.Logs {
-		curLog := log.Value.Logs[i]
+	for i := range l.Value.Logs {
+		curLog := l.Value.Logs[i]
 		if !strings.Contains(curLog, "Program 11111111111111111111111111111111 success") {
 			continue // Search further.
 		}
 
-		if i+1 >= len(log.Value.Logs) {
+		if i+1 >= len(l.Value.Logs) {
 			break // No more logs.
 		}
 
-		nextLog := log.Value.Logs[i+1]
+		nextLog := l.Value.Logs[i+1]
 		if !strings.Contains(nextLog, "Program srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX invoke [1]") {
 			continue // Search further.
 		}
 
 		// Found it: send signature with no metadata
-		txCandidate := TxCandidate{log.Value.Signature, o.connName, nil}
+		txCandidate := TxCandidate{l.Value.Signature, o.connName, nil}
 		txCandidatePublishC <- txCandidate
 		break
 	}
 
 	logset.mu.Lock()
-	logset.logs[log.Value.Signature] = struct{}{}
+	logset.logs[l.Value.Signature] = struct{}{}
 	logset.mu.Unlock()
+	end := time.Now()
+	duration := end.Sub(begin)
+
+	log.Debugf("analyzing logs took %fs for %s with %d logs", duration.Seconds(), l.Value.Signature.String(), len(l.Value.Logs))
 }
 
 func (o *LogObserver) subscribeForRaydiumLogs(ctx context.Context) (*ws.LogSubscription, error) {
-	log.Debugf("[%v] LogObserver: Subscribe for Raydium Liquidity program logs on %s...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName)
+	log.Warnf("LogObserver: Subscribe for Raydium Liquidity program logs on %s...", o.connName)
 	conn := o.rpcPool.NamedConnection(o.connName)
 	wsClient, err := ws.Connect(ctx, conn.ConnectionInfo.WSEndpoint)
 	if err != nil {
@@ -206,14 +211,14 @@ func (o *LogObserver) consumeRaydiumLogs(raydiumSubID *ws.LogSubscription, txCan
 }
 
 func (o *LogObserver) reconnecRaydiumSubscription(subID *ws.LogSubscription, reason error) {
-	log.Debugf("[%v] LogObserver: Reconnecting subscription for Raydium program logs on %s due to: %v...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, reason)
+	log.Warnf("LogObserver: Reconnecting subscription for Raydium program logs on %s due to: %v...", o.connName, reason)
 	subID.Unsubscribe()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	raydiumSubID, err := o.subscribeForRaydiumLogs(ctx)
 	if err != nil {
-		log.Errorf("[%v] LogObserver: Error reconnecting subscription for Raydium program logs on %s: %v; trying again...", time.Now().Format("2006-01-02 15:04:05.000"), o.connName, err)
+		log.Errorf("LogObserver: Error reconnecting subscription for Raydium program logs on %s: %v; trying again...", o.connName, err)
 		time.Sleep(5 * time.Second)
 		ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
 		raydiumSubID, err = o.subscribeForRaydiumLogs(ctx)

@@ -101,7 +101,7 @@ func (a *AmmInfo) Ready() bool {
 }
 
 func (a *AmmInfo) String() string {
-	return a.TokenAddress().String()
+	return a.AmmID.String()
 }
 
 // Update amm info if market pair was created in reverse order to match the order of the market.

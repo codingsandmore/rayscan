@@ -21,13 +21,11 @@ type TokenInfo struct {
 }
 
 func (t *TokenInfo) String() string {
-	return fmt.Sprintf("Token(\n"+
-		"\ttime: %s\n"+
-		"\tsupply: %d\n"+
-		"\tdecimals: %d\n"+
-		"\ttxid: %s\n"+
-		"\taddress: %s\n"+
-		")", t.TxTime, t.TotalSupply, t.Decimals, t.TxID, t.Address)
+	return fmt.Sprintf("Token("+
+		"supply: %d"+
+		"decimals: %d"+
+		"address: %s"+
+		")", t.TotalSupply, t.Decimals, t.Address)
 }
 func (t *TokenInfo) TokenAddress() solana.PublicKey {
 	return t.Address
@@ -55,11 +53,11 @@ type PairInfo struct {
 }
 
 func (p *PairInfo) String() string {
-	return fmt.Sprintf("Pair(\n"+
-		"\ttoken: %s\n"+
-		"\tamm %s\n"+
-		"\tcalculated amm: %s\n"+
-		"\treadiness: %s\n"+
+	return fmt.Sprintf("Pair("+
+		" token: %s"+
+		" amm %s"+
+		" calculated amm: %s"+
+		" readiness: %s"+
 		")", p.TokenInfo.String(), p.AmmInfo.String(), p.CalculatedAmmInfo.String(), p.Readiness)
 }
 func (p *PairInfo) GetCurrentAmmLiveInfo() raydium.AmmLiveInfo {
@@ -73,30 +71,6 @@ func (p *PairInfo) SetCurrentAmmLiveInfo(ammLiveInfo raydium.AmmLiveInfo) {
 	defer p.mu.RUnlock()
 	p.AmmInfo.CurrentLiveInfo = ammLiveInfo
 }
-
-var AnalosPairInfo = &PairInfo{
-	MarketInfo: serum.MarketInfo{
-		Market:      solana.MustPublicKeyFromBase58("3sJVHtBTjpHmTgArbtTz5cDr6umJZUTjx8yZfyoGAhZm"),
-		Bids:        solana.MustPublicKeyFromBase58("6v5VTf216NTojE1fqTjGneDo9Gv4VRWpnFHZ6CwcLE6N"),
-		Asks:        solana.MustPublicKeyFromBase58("FVUiBevqdWPYawWF71wy7guzM99NqcXkezSuNW9ZH1Xs"),
-		EventQueue:  solana.MustPublicKeyFromBase58("EPwYeGjPb3vJbd3wPN4d5oPEVtwoufKeJ7kktXYMgsrV"),
-		BaseVault:   solana.MustPublicKeyFromBase58("Dd5CeV5pfBAkQUimseZ9psrqpe9BwF6LhGA4nGhBbski"),
-		QuoteVault:  solana.MustPublicKeyFromBase58("9gWd9qjVsdXemKLXZQ1zNHhPNo3WsYZcxYBTWDZLMs7X"),
-		VaultSigner: solana.MustPublicKeyFromBase58("CyZn7qBwL9cMfxh1ghDsqSQwqardaEaq8sienzxqBg5x"),
-	},
-	AmmInfo: raydium.AmmInfo{
-		AmmID:                solana.MustPublicKeyFromBase58("69grLw4PcSypZnn3xpsozCJFT8vs8WA5817VUVnzNGTh"),
-		AmmAuthority:         solana.MustPublicKeyFromBase58("5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"),
-		AmmOpenOrders:        solana.MustPublicKeyFromBase58("2QoiVyXa8Bfgx35yTcJhQJVvZYouKZutj5r5CEDPgQUm"),
-		AmmTargetOrders:      solana.MustPublicKeyFromBase58("4m5ecbRZzY7G7TaksDFmv2u8x52FLd9msemHC3xhtFWg"),
-		PoolCoinTokenAccount: solana.MustPublicKeyFromBase58("9ibeYfpgDxyoSYNvsc37EwGua6Z1NQpp7LH6e7CvBabM"),
-		PoolPcTokenAccount:   solana.MustPublicKeyFromBase58("5JFikPKzw3JeXKaJZaKTEAHfF3pJAoFJbHXUB5p2Ns5S"),
-		TokenMintAddress:     solana.MustPublicKeyFromBase58("7iT1GRYYhEop2nV1dyCwK2MGyLmPHq47WhPGSwiqcUg5"),
-		CurrencyAddress:      solana.SolMint,
-	},
-	Readiness: time.Now(),
-}
-
 func (p *PairInfo) TokenAddress() solana.PublicKey {
 	return p.MarketInfo.TokenAddress()
 }

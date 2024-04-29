@@ -30,16 +30,6 @@ func (r *RPCPool) Size() int {
 	return len(r.Connections)
 }
 
-func (r *RPCPool) BaseConnection() Connection {
-	for _, c := range r.Connections {
-		if c.ConnectionInfo.RPCEndpoint == rpc.MainNetBeta_RPC {
-			return *c
-		}
-	}
-
-	panic("No base connection found!")
-}
-
 func (r *RPCPool) NamedConnection(name string) Connection {
 	for _, c := range r.Connections {
 		if c.ConnectionInfo.Name == name {
@@ -54,19 +44,28 @@ func (r *RPCPool) Client() *rpc.Client {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if len(r.Connections) == 1 {
+		log.Debugf("only having one connection, no point in switching...")
+		return r.Connections[0].RPCClient
+	}
+	currentClient := r.Connections[r.CurrentIdx]
 	oldIdx := r.CurrentIdx
 
 	for i := 0; r.Connections[oldIdx].CooldownUntil.After(time.Now()); i++ {
 		oldIdx = (oldIdx + 1) % len(r.Connections)
 		if i == len(r.Connections) {
-			log.Debugf("All connections are on cooldown, waiting for cooldown to end... Consider adding new RPC providers\n")
+			log.Warnf(
+				"All connections are on cooldown, waiting for cooldown to end... Consider adding new RPC providers\n")
 			time.Sleep(50 * time.Millisecond)
 			i = 0
 		}
 	}
 
 	r.CurrentIdx = (oldIdx + 1) % len(r.Connections)
-	return r.Connections[oldIdx].RPCClient
+	newClient := r.Connections[oldIdx]
+
+	log.Debugf("switching from %s to %", currentClient, newClient)
+	return newClient.RPCClient
 }
 
 func (r *RPCPool) Close() {
@@ -114,7 +113,7 @@ func NewRPCClientPool(nodes map[string]config.RPCNode, init BuildRPCClient) (*RP
 				code = err.(*jsonrpc.RPCError).Code
 			}
 
-			log.Debugf("Remove unhealthy connection: %s (reason: %s, code: %d)\n", v.Name, reason, code)
+			log.Warnf("Remove unhealthy connection: %s (reason: %s, code: %d)\n", v.Name, reason, code)
 			rpcClient.Close()
 			continue
 		}

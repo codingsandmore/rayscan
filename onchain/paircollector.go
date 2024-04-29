@@ -59,7 +59,7 @@ func (c *PairCollector) Start(pairPublishC chan *PairInfo) {
 
 			pair, err := c.handleInfo(genericInfo)
 			if err != nil {
-				log.Infof("PairCollector: error handling info (%T): %s", genericInfo, err)
+				log.Debugf("PairCollector: error handling info (%T): %s", genericInfo, err)
 				continue
 			}
 
@@ -78,10 +78,10 @@ func (c *PairCollector) Start(pairPublishC chan *PairInfo) {
 			// Update pair status.
 			if tokenAddress != solana.WrappedSol {
 				c.createdPairs[tokenAddress] = struct{}{}
-				log.Infof("PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+				log.Debugf("PairCollector: new pair found (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
 
 				if pairPublishC != nil {
-					log.Infof("PairCollector: publishing new pair to subscriber (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
+					log.Debugf("PairCollector: publishing new pair to subscriber (token: %s, ammid: %s, opentime: %s)", tokenAddress, pair.AmmInfo.AmmID, pair.AmmInfo.InitialLiveInfo.UpdateTime.Format("2006-01-02 15:04:05.000"))
 					pairPublishC <- pair
 				} else {
 					log.Warnf("PairCollector: you did not configure a subscribing channel, skipping step")
@@ -118,7 +118,7 @@ func (c *PairCollector) handleMarketInfo(market *serum.MarketInfo) (*PairInfo, e
 		MarketInfo: *market,
 	}
 
-	log.Infof("PairCollector: new market discovered for (token: %s, tx time: %v)", tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
+	log.Debugf("PairCollector: new market discovered for (token: %s, tx time: %v)", tokenAddress, market.TxTime.Format("2006-01-02 15:04:05.000"))
 	return c.pairs[tokenAddress], nil
 }
 
